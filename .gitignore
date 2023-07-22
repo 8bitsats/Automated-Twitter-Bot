@@ -1,2 +1,3 @@
 auth2.py
-node_modules
+tweet
+.env
