@@ -29,7 +29,7 @@ def authenticate_twitter():
 
 
 def authenticate_openai():
-    openai.api_key = str(os.getenv("OPENAI_kEY"))
+    openai.api_key = str(os.getenv("OPENAI_API_KEY"))
 
     try:
         response = openai.Completion.create(engine="text-davinci-002", prompt="Testing authentication.")
