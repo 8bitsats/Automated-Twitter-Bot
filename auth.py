@@ -1,5 +1,6 @@
 import tweepy
 import openai
+import telegram
 import os
 from dotenv import load_dotenv
 
@@ -40,3 +41,22 @@ def authenticate_openai():
         print(f"OpenAI authentication failed: {e}")
         return False
 
+
+def authenticate_telegram():
+    """Authenticates with Telegram and returns the bot token."""
+
+    bot_token = str(os.getenv('TELEGRAM_TOKEN'))
+
+    try:
+        bot = telegram.Bot(bot_token)
+        return bot.get_me().id
+    except telegram.Unauthorized:
+        print("Invalid telegram bot token.")
+        return None
+
+
+    bot_id = authenticate_telegram()
+    if bot_id:
+        print("Bot authenticated successfully.")
+    else:
+        print("Failed to authenticate bot.")
