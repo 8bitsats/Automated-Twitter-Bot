@@ -36,9 +36,10 @@ base_authorization_url = "https://api.twitter.com/oauth/authorize"
 authorization_url = oauth.authorization_url(base_authorization_url)
 
 
-webbrowser.open(authorization_url)
-driver = (webdriver.Chrome() or webdriver.Firefox() or webdriver.Edge())
-element= driver.find_element(by="class", value="submit button selected")
+browser = webdriver.Firefox(executable_path='/geckodriver')
+browser.get(authorization_url)
+# webbrowser.open(authorization_url)
+element= browser.find_element(by="id", value="allow")
 element.click()
 verifier = input("Paste the PIN here: ")
 
