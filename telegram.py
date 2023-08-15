@@ -1,5 +1,5 @@
 import telegram
-from telegram.ext.chatbot import Chat
+# from telegram.ext.chatbot import Chat
 
 
 # def go_to_first_message(channel_id, date=None):

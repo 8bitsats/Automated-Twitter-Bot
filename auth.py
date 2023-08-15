@@ -15,9 +15,9 @@ def authenticate_twitter():
         access_token = str(os.getenv('ACCESS_TOKEN'))
         access_token_secret = str(os.getenv('ACCESS_TOKEN_SECRET'))
 
-        auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+        auth = tweepy.OAuth1UserHandler(consumer_key, consumer_secret)
         auth.set_access_token(access_token, access_token_secret)
-        api = tweepy.API(auth)
+        api = tweepy.API(auth, wait_on_rate_limit=True)
 
         # Check if Twitter authentication is successful
         user = api.verify_credentials()
