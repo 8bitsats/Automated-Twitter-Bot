@@ -2,8 +2,13 @@ auth2.py
 tweet
 .env
 text
+<<<<<<< HEAD
 tweeting
 __pycache__
+=======
+__pycache__
+
+>>>>>>> 7cf8c6c68249385b68290ad0a6555da376d7fcb7
 
 
 
