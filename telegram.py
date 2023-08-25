@@ -2,65 +2,55 @@ import requests
 import re
 from bs4 import BeautifulSoup
 
-def get_media_from_telegram_link(telegram_link):
-    # Fetch the page content
-    response = requests.get(telegram_link)
-    response.raise_for_status()
+telegram_url = "https://t.me/Nature/20609?embed=1&mode=tme"
+response = requests.get(url=telegram_url)
+soup = BeautifulSoup(response.content, "html.parser")
+channel = telegram_url.split("/")[3]
+message_id = telegram_url.split("/")[4].split("?")[0]
 
-    html_content = response.text
-    # with open("html_file.html", "w") as f:
-    #     f.write(html_content)
-    # print(html_content)
+def download_video(url):
 
-    # Parse the HTML content using BeautifulSoup
-    soup = BeautifulSoup(html_content, 'html.parser')
+    # Search for the video tag and extract the 'src' attribute
+    video_url = soup.find('video')['src']
+    # Download the video
+    video_response = requests.get(video_url, stream=True)
+    video_response.raise_for_status()
 
-    # Get media and caption elements
-    og_media_url = soup.find("meta", property="og:image")
-    og_caption = soup.find("meta", property="og:description")
-    twitter_media_url = soup.find("meta", property="twitter:image")
-    twitter_caption = soup.find("meta", property="twitter:description")
+    # Save the video to a local file
+    with open(f'{channel}-{message_id}.mp4', 'wb') as file:
+        for chunk in video_response.iter_content(chunk_size=8192):
+            file.write(chunk)
 
-    # Get media url
-    if og_media_url is not None:
-        media_url = og_media_url["content"]
-    elif twitter_media_url is not None:
-        media_url = twitter_media_url["content"]
+def download_image(url):
 
-    else:
-        print("Could not find the expected image element. The structure of the page might have changed.")
-        return
+    # Find the anchor tag with the class "tgme_widget_message_photo_wrap" and extract the background-image URL from its style attribute
+    image_tag = soup.find('a', class_='tgme_widget_message_photo_wrap')
+    image_url = image_tag['style'].split('url(')[1].split(')')[0].strip("'")
+
+    img_response = requests.get(image_url, stream=True)
+    img_response.raise_for_status()
+
+    # Save the video to a local file
+    with open(f"{channel}-{message_id}.jpg", 'wb') as file:
+        for chunk in img_response.iter_content(chunk_size=8192):
+            file.write(chunk)
+
+def get_caption(url):
+
+    # Find the div with the class "tgme_widget_message_text" 
+    message_div = soup.find('div', class_='tgme_widget_message_text')
+    caption = list(message_div.stripped_strings)[0]  # This splits the content based on the presence of tags
+    if not caption:
+        caption = "#Nature is just amazing 🌎"
+
+    return caption
+
+def post_not_found(url):
+    error = soup.find('div', class_="tgme_widget_message_error")
     
-    # get the caption
-    if og_caption is not None:
-        text_caption = og_caption["content"].split("\n")[0]
-    elif twitter_caption is not None:
-        text_caption = twitter_caption["content"].split("\n")[0]
+    if error and error.text == "Post not found":
+        # print("Page not found")
+        return True
     else:
-        text_caption = "#Nature is amazing 🌎"
+        return False
 
-    match = re.search(r"International Nature channel. Discover Earth with us!", text_caption)
-    if not match:
-        # Download the media
-        media_response = requests.get(media_url, stream=True)
-        media_response.raise_for_status()
-
-
-        # Save the media to a local file
-        split_link = telegram_link.split("/")[-2:]
-        if media_url.endswith(('.jpg', '.jpeg', '.png', '.gif', '.bmp')):
-            filename = "_".join(split_link) + "." + media_url.split(".")[-1]
-        else:
-            filename = "_".join(split_link)
-        with open(filename, 'wb') as file:
-            for chunk in media_response.iter_content(chunk_size=8192):
-                file.write(chunk)
-        print("File name: ", filename)
-        print(text_caption)
-    else:
-        pass
-
-
-# Test with your Telegram link
-get_media_from_telegram_link("https://t.me/Nature/139")
-# https://t.me/Nature/5611
