@@ -3,6 +3,7 @@ import requests
 import re
 from bs4 import BeautifulSoup
 from datetime import datetime
+import time
 
 def initialize_log_file():
     if not os.path.exists('log_file.txt'):
@@ -75,7 +76,7 @@ def post_not_found(url):
         return False
 
 initialize_log_file()
-for message_id in range(18,30):
+for message_id in range(400, 410):
     log_values = []
     telegram_url = f"https://t.me/Nature/{message_id}?embed=1&mode=tme"
     response = requests.get(url=telegram_url)
@@ -108,5 +109,5 @@ for message_id in range(18,30):
         get_caption(telegram_url)
      # Log all values to the log file
     log_to_file(log_values)
-        
+    time.sleep(10)
 
