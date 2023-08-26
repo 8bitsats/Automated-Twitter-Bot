@@ -39,12 +39,16 @@ def download_image(url):
 def get_caption(url):
 
     # Find the div with the class "tgme_widget_message_text" 
-    message_div = soup.find('div', class_='tgme_widget_message_text')
-    caption = list(message_div.stripped_strings)[0]  # This splits the content based on the presence of tags
-    if not caption:
-        caption = "#Nature is just amazing 🌎"
-    print(caption)
-    return caption
+    if bool(soup.find('div', class_='tgme_widget_message_text')) == True:
+        message_div = soup.find('div', class_='tgme_widget_message_text')
+        caption = list(message_div.stripped_strings)[0]  # This splits the content based on the presence of tags
+        if not caption:
+            caption = "#Nature is just amazing 🌎"
+        return caption
+    else:
+        print("No caption found")
+        return None
+
 
 def post_not_found(url):
     error = soup.find('div', class_="tgme_widget_message_error")
@@ -55,7 +59,7 @@ def post_not_found(url):
     else:
         return False
 
-for message_id in range(8,27):
+for message_id in range(18,22):
     telegram_url = f"https://t.me/Nature/{message_id}?embed=1&mode=tme"
     response = requests.get(url=telegram_url)
     soup = BeautifulSoup(response.content, "html.parser")
@@ -69,17 +73,19 @@ for message_id in range(8,27):
         if bool(soup.find('video')) == True:
             try:
                 download_video(telegram_url)
-                print("video downloaded")
+                # print("video downloaded")
             except TypeError:
                 print("No video")
         elif bool(soup.find('a', class_='tgme_widget_message_photo_wrap')) == True:
             try:
                 download_image(telegram_url)
-                print("image downloaded")
+                # print("image downloaded")
             except None:
                 print(f"No image found at url No: {message_id}")
+        else:
+            continue
         
         # Grab the caption
-        # get_caption(telegram_url)
+        get_caption(telegram_url)
         
 
