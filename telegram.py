@@ -1,12 +1,8 @@
 import requests
 import re
 from bs4 import BeautifulSoup
+from datetime import datetime
 
-telegram_url = "https://t.me/Nature/20609?embed=1&mode=tme"
-response = requests.get(url=telegram_url)
-soup = BeautifulSoup(response.content, "html.parser")
-channel = telegram_url.split("/")[3]
-message_id = telegram_url.split("/")[4].split("?")[0]
 
 def download_video(url):
 
@@ -20,6 +16,8 @@ def download_video(url):
     with open(f'{channel}-{message_id}.mp4', 'wb') as file:
         for chunk in video_response.iter_content(chunk_size=8192):
             file.write(chunk)
+    time = datetime.now()
+    return True
 
 def download_image(url):
 
@@ -34,6 +32,9 @@ def download_image(url):
     with open(f"{channel}-{message_id}.jpg", 'wb') as file:
         for chunk in img_response.iter_content(chunk_size=8192):
             file.write(chunk)
+    time = datetime.now()
+    print("Time :", time)
+    return True
 
 def get_caption(url):
 
@@ -42,15 +43,43 @@ def get_caption(url):
     caption = list(message_div.stripped_strings)[0]  # This splits the content based on the presence of tags
     if not caption:
         caption = "#Nature is just amazing 🌎"
-
+    print(caption)
     return caption
 
 def post_not_found(url):
     error = soup.find('div', class_="tgme_widget_message_error")
     
-    if error and error.text == "Post not found":
+    if error and error.text == "Postmessage_id not found":
         # print("Page not found")
         return True
     else:
         return False
+
+for message_id in range(8,27):
+    telegram_url = f"https://t.me/Nature/{message_id}?embed=1&mode=tme"
+    response = requests.get(url=telegram_url)
+    soup = BeautifulSoup(response.content, "html.parser")
+    channel = telegram_url.split("/")[3]
+    start_time = datetime.now()
+
+    # validate the link has media
+    if post_not_found(telegram_url):
+        pass
+    else:
+        if bool(soup.find('video')) == True:
+            try:
+                download_video(telegram_url)
+                print("video downloaded")
+            except TypeError:
+                print("No video")
+        elif bool(soup.find('a', class_='tgme_widget_message_photo_wrap')) == True:
+            try:
+                download_image(telegram_url)
+                print("image downloaded")
+            except None:
+                print(f"No image found at url No: {message_id}")
+        
+        # Grab the caption
+        # get_caption(telegram_url)
+        
 
