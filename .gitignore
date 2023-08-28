@@ -1,4 +1,3 @@
-auth2.py
 tweet
 .env
 text
@@ -6,8 +5,9 @@ tweeting
 __pycache__
 Nature*
 *.html
-
-
+__pycache__
+async-upload.py
+test2.py
 
 
 
