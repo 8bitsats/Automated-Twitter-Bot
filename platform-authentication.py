@@ -20,10 +20,20 @@ def authenticate_twitter():
         auth.set_access_token(access_token, access_token_secret)
         api = tweepy.API(auth, wait_on_rate_limit=True)
 
-        # Check if Twitter authentication is successful
+        # Check if Twitter OAuth1UserHandler authentication is successful
         user = api.verify_credentials()
         print(f"Twitter authentication successful. User: {user.screen_name}")
-        return api
+        
+        # V2 Twitter API Authentication
+        client = tweepy.Client(
+            bearer_token,
+            consumer_key,
+            consumer_secret,
+            access_token,
+            access_token_secret,
+            wait_on_rate_limit=True,
+        )
+        return api, client
 
     except tweepy.TweepyException as e:
         print(f"Twitter authentication failed: {e}")
