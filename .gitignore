@@ -4,8 +4,6 @@ text
 tweeting
 __pycache__
 *.html
-__pycache__
-async-upload.py
 test2.py
 
 
