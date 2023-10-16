@@ -43,7 +43,7 @@ def authenticate_twitter():
 def post_image_with_caption():
     api, client = authenticate_twitter()
     # Upload image to Twitter.
-    media_id = api.media_upload(filename="Media_Files/download.jpeg").media_id_string
+    media_id = api.media_upload(filename="Path/to/image.jpeg").media_id_string
     print(media_id)
 
     # Text to be Tweeted
@@ -54,4 +54,4 @@ def post_image_with_caption():
     print("Tweeted!")
 
 
-post_image_with_caption()
+# post_image_with_caption()
