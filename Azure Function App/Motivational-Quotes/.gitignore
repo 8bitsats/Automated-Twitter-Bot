@@ -4,3 +4,5 @@ __blobstorage__
 __queuestorage__
 test*
 __pycache__
+.venv
+.python_packages

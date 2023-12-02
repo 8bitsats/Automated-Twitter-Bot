@@ -1,3 +1,8 @@
+'''
+This code gets content from https://t.me/mqquotes/
+
+'''
+
 import re
 import tweepy
 import random
@@ -11,22 +16,41 @@ from azure.storage.blob import BlobType
 from azure.storage.blob import PublicAccess
 from azure.storage.blob import BlobServiceClient
 
+# Remove Words from the caption
+rm_words = ['@Quotes_Wallpapers', '@mqquotes', '#Motivation', '#mqquotes', '#mq_quotes', '#mqquotes', '#quotes', '#Quotes', '#Mqquotes', '"', ";"]
+
+def remove_words(string):
+    for word in rm_words:
+        if word in string:
+            string = string.replace(word, '')
+    return string
+
+
+def check_blob_url_exists(blob_url):
+    try:
+        response = requests.head(blob_url)
+        # Check if the response status code is in the 2xx range (success)
+        return response.status_code // 100 == 2
+    except requests.RequestException:
+        # Handle request exceptions (e.g., network issues)
+        return False
 
 
 app = func.FunctionApp()
 
-@app.schedule(schedule="0 */2 * * * *", arg_name="myTimer", run_on_startup=True,
-				use_monitor=False) 
+@app.schedule(schedule="0 */30 * * * *", arg_name="myTimer", run_on_startup=True,
+				use_monitor=False)
+
 def timer_trigger(myTimer: func.TimerRequest) -> None:
 	if myTimer.past_due:
 		logging.info('The timer is past due!')
 
-	#********************************Autentication**********************#
+	#********************************Autentication******************************#
 
 	# Authenticate Azure
-	connection_string = "DefaultEndpointsProtocol=https;AccountName=newstuffstorageacc;AccountKey=4rMg0VGMoe4JZnH/wtYsIks3yzlswz2ZN/+WZUfWe+B3EDk5OAowfcA7XOS5/jtagWkIAktZxJE0+AStqAm5Qw==;EndpointSuffix=core.windows.net"
-	container_name = "motivationquotes"
-	blob_name = "logfile.txt"
+	connection_string = "##Your connection string here#"
+	container_name = "###Your container name ####"
+	blob_name = "Your text file to store the logs"
 
 	blob_service_client = BlobServiceClient.from_connection_string(connection_string)
 
@@ -47,11 +71,11 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 
 	# authenticate twitter
 	try:
-		consumer_key = "Uyo5A29Pvycb8c7IqAkSq47Vd"
-		consumer_secret = "9uNYNSSLOlZ0IvFIOhfGPTfVRv2T21dDKJqIrDgghAEZNPAFbl"
-		access_token = "1483479711510638601-rpEYVKnHKcQZ48xhcJf9Q1RuZYGf0U"
-		access_token_secret = "gmDZnI1zS28GnloaOgc8eaRii1hqGAcn3lgiZTZoOrAZi"
-		bearer_token = "AAAAAAAAAAAAAAAAAAAAAN0%2BnQEAAAAA3ciJTIEiMdqAdGhuTXB57sw%2FuPc%3DCqFW0IPYu7YgqajLAXAJ4NE9ywvPOZNVLyQHn3uVl5BiVoiBYJ"
+		consumer_key = ""
+		consumer_secret = ""
+		access_token = ""
+		access_token_secret = ""
+		bearer_token = ""
 
 
 		auth = tweepy.OAuth1UserHandler(consumer_key, consumer_secret)
@@ -60,17 +84,17 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 
 		# Check if Twitter authentication is successful
 		user = api.verify_credentials()
-		logging.info(f"Twitter authentication successful. User: {user.screen_name}")
+		logging.info(f"User {user.screen_name} Authenticated !")
 
 		# V2 Twitter API Authentication
 		client = tweepy.Client(
-        bearer_token,
-        consumer_key,
-        consumer_secret,
-        access_token,
-        access_token_secret,
-        wait_on_rate_limit=True,
-		)
+			bearer_token,
+			consumer_key,
+			consumer_secret,
+			access_token,
+			access_token_secret,
+			wait_on_rate_limit=True,
+			)
 
 	except tweepy.TweepyException as e:
 		logging.error(f"Twitter authentication failed: {e}")
@@ -79,7 +103,7 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 	#************************************ VARIABLES ****************************************************
 	log_values = []
 	channel_name = "mqquotes"
-	message_id = random.choice(range(0,2345))
+	message_id = random.choice(range(11341,16142))
 	account_name = re.search("AccountName=(.*?);", connection_string).group(1)
 	telegram_download_url = f"https://t.me/{channel_name}/{message_id}?embed=1&mode=tme"
 	response = requests.get(url=telegram_download_url)
@@ -102,7 +126,6 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 		parts = string.split(',')
 		if len(parts) >= 3:
 			numbers.append(int(parts[2]))
-	logging.info(numbers)
 
 	# Check if the generated number exists in the existing data
 	if message_id in numbers:
@@ -111,26 +134,30 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 
 	# validate the link has media
 	if error and error.text == "Post not found":
-		pass
+		log_values.extend(['No Post', 'No caption' '0'])
+		logging.error(f"No post found in in id: {message_id} !!")
+		exit(1)
 
-# ----------------------------- DOWNLOAD VIDEO TO BLOB STORAGE ---------------------------#
 
-	# if bool(soup.find('video')) == True:
-	#     log_values.append('Video')
-	#     # Search for the video tag and extract the 'src' attribute
-	#     video_url = soup.find('video')['src']
-	#     video_response = requests.get(video_url, stream=True)
-	#     video_response.raise_for_status()
+	# ----------------------------- DOWNLOAD VIDEO TO BLOB STORAGE ---------------------------#
 
-	#     # Create a BlobClient for the file in the container
-	#     filename = f'{channel}-{message_id}.mp4'
-	#     media_blob_client = blob_service_client.get_blob_client(container_name, filename)
+		# if bool(soup.find('video')) == True:
+		#     log_values.append('Video')
+		#     # Search for the video tag and extract the 'src' attribute
+		#     video_url = soup.find('video')['src']
+		#     video_response = requests.get(video_url, stream=True)
+		#     video_response.raise_for_status()
 
-	#     # Upload the file's content to Azure Blob Storage
-	#     if not media_blob_client.exists():
-	#         media_blob_client.upload_blob(video_response.content)
+		#     # Create a BlobClient for the file in the container
+		#     filename = f'{channel}-{message_id}.mp4'
+		#     media_blob_client = blob_service_client.get_blob_client(container_name, filename)
 
-# ----------------------------- DOWNLOAD IMAGE TO BLOB STORAGE---------------------------#
+		#     # Upload the file's content to Azure Blob Storage
+		#     if not media_blob_client.exists():
+		#         media_blob_client.upload_blob(video_response.content)
+
+
+	# ----------------------------- DOWNLOAD IMAGE TO BLOB STORAGE---------------------------#
 
 	if bool(soup.find('a', class_='tgme_widget_message_photo_wrap')) == True:
 		log_values.append("Image")
@@ -142,48 +169,64 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 		# Create a BlobClient for the file in the container
 		filename = f'{channel_name}-{message_id}.jpg'
 		media_blob_client = blob_service_client.get_blob_client(container_name, filename)
-		logging.info('We are here')
 
 		# Upload the file's content to Azure Blob Storage
 		if not media_blob_client.exists():
 			media_blob_client.upload_blob(img_response.content)
-
-#--------------------- SAVE CAPTION TO LOG FILE-------------------#
-	if bool(soup.find('div', class_='tgme_widget_message_text')) == True:
-	    message_div = soup.find('div', class_='tgme_widget_message_text')
-	    caption = list(message_div.stripped_strings)[0]  # This splits the content based on the presence of tags
 	else:
-	    # caption = "#Nature is just amazing 🌎"
-	    caption = ""
+		log_values.append("No media")
 
-	# caption = '' # Text to be Tweeted
+	#--------------------- SAVE CAPTION-------------------#
+	if bool(soup.find('div', class_='tgme_widget_message_text')) == True:
+		message_div = soup.find('div', class_='tgme_widget_message_text')
+		content = message_div.get_text()
+		caption=remove_words(content)
 
+		promotional_text = re.findall("https://t.me", caption)
+
+		if promotional_text:
+			log_values.extend(["promotional", "0"])
+			logging.error("Caption is promotional")
+			return
+
+	else:
+		# caption = "#Nature is just amazing 🌎"
+		caption = ""
+
+	logging.info(caption)
 	log_values.append(caption)
 
-# -----------------------------READ THE MEDIA FILE ------------------------------------#
+
+# -----------------------------READ THE MEDIA, CAPTION AND POST TO TWITTER ------------------------------------#
 
 	post_media_url = f"https://{account_name}.blob.core.windows.net/{container_name}/{filename}"
-	media_content = requests.get(post_media_url).content
 
-	# Upload the image
-	media_file = BytesIO(media_content)
+	exists = check_blob_url_exists(blob_url=post_media_url)
 
-	# Upload image to Twitter.
-	media_id = api.media_upload(filename=filename, file=media_file).media_id_string
-	log_values.append(media_id)
-	logging.info(f"Media ID: {media_id}")
+	if exists:
+		media_content = requests.get(post_media_url).content
+		media_file = BytesIO(media_content) # Upload the image
 
-	# Send Tweet with Text and media ID
-	client.create_tweet(text=caption, media_ids=[media_id])
-	logging.info("Tweeted!")
+		# Upload image to Twitter.
+		media_id = api.media_upload(filename=filename, file=media_file).media_id_string
+		log_values.append(media_id)
+
+		# Send Tweet with Text and media ID
+		client.create_tweet(text=caption, media_ids=[media_id])
+		logging.info("Tweeted!")
+
+		# -------------------------------DELLETE BLOB FILE ------------------------------#
+
+		media_blob_client.delete_blob(delete_snapshots='include')
+		logging.info("blob deleted successfully")
+
+	else:
+		tweet = client.create_tweet(text=caption)
+		log_values.append(tweet.data['id'])
+		logging.info("Tweeted without media")
 
 
-# -------------------------------DELLETE BLOB FILE ------------------------------#
-
-	media_blob_client.delete_blob(delete_snapshots='include')
-	logging.info("blob deleted successfully")
-
-# ---------------------------------Append Data-----------------------------------#
+	# ---------------------------------Append Data-----------------------------------#
 	log_values = [str(value) for value in log_values]
 	# Append the new data to the blob with a comma separator and a newline character
 	updated_data = existing_data + (b'\n' if existing_data else b"") + ','.join(log_values).encode('utf-8')
