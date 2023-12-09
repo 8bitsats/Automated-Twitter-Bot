@@ -17,7 +17,9 @@ from azure.storage.blob import PublicAccess
 from azure.storage.blob import BlobServiceClient
 
 # Remove Words from the caption
-rm_words = ['@Quotes_Wallpapers', '@mqquotes', '#Motivation', '#mqquotes', '#mq_quotes', '#mqquotes', '#quotes', '#Quotes', '#Mqquotes', '"', ";"]
+rm_words = ['@Quotes_Wallpapers', '@mqquotes', '#Motivation', '#mqquotes', '#mq_quotes', 
+			'#mqquotes', '#quotes', '@ImQuotes', '#Quotes', '#Mqquotes', '#thoughts', 
+			'#thought', '"', ";"]
 
 def remove_words(string):
     for word in rm_words:
@@ -38,7 +40,8 @@ def check_blob_url_exists(blob_url):
 
 app = func.FunctionApp()
 
-@app.schedule(schedule="0 */30 * * * *", arg_name="myTimer", run_on_startup=True,
+# Schedule timer to execute after every 8 hours
+@app.schedule(schedule="0 0 */8 * * *", arg_name="myTimer", run_on_startup=True,
 				use_monitor=False)
 
 def timer_trigger(myTimer: func.TimerRequest) -> None:
@@ -48,9 +51,9 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 	#********************************Autentication******************************#
 
 	# Authenticate Azure
-	connection_string = "##Your connection string here#"
-	container_name = "###Your container name ####"
-	blob_name = "Your text file to store the logs"
+	connection_string = ""
+	container_name = "quotes"
+	blob_name = "logfile.txt"
 
 	blob_service_client = BlobServiceClient.from_connection_string(connection_string)
 
@@ -99,6 +102,7 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 	except tweepy.TweepyException as e:
 		logging.error(f"Twitter authentication failed: {e}")
 		return None
+
 
 	#************************************ VARIABLES ****************************************************
 	log_values = []
@@ -187,7 +191,9 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 		if promotional_text:
 			log_values.extend(["promotional", "0"])
 			logging.error("Caption is promotional")
-			return
+			media_blob_client.delete_blob(delete_snapshots='include')
+			logging.info("blob deleted successfully")
+			exit(1)
 
 	else:
 		# caption = "#Nature is just amazing 🌎"
@@ -215,16 +221,18 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 		client.create_tweet(text=caption, media_ids=[media_id])
 		logging.info("Tweeted!")
 
-		# -------------------------------DELLETE BLOB FILE ------------------------------#
-
-		media_blob_client.delete_blob(delete_snapshots='include')
-		logging.info("blob deleted successfully")
-
 	else:
 		tweet = client.create_tweet(text=caption)
 		log_values.append(tweet.data['id'])
 		logging.info("Tweeted without media")
 
+# -------------------------------DELLETE BLOB FILE ------------------------------#
+
+	try:
+		media_blob_client.delete_blob(delete_snapshots='include')
+		logging.info("blob deleted successfully")
+	except AttributeError as e:
+		logging.info("No Blob to delete")
 
 	# ---------------------------------Append Data-----------------------------------#
 	log_values = [str(value) for value in log_values]
@@ -233,6 +241,5 @@ def timer_trigger(myTimer: func.TimerRequest) -> None:
 
 	# Upload the updated data to the blob
 	blob_client.upload_blob(updated_data, blob_type=BlobType.BlockBlob, overwrite=True)
+	exit(0)
 
-	# display all log values
-	logging.info(log_values)

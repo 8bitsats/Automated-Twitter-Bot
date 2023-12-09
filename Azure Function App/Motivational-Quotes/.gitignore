@@ -6,3 +6,4 @@ test*
 __pycache__
 .venv
 .python_packages
+testenv

@@ -4,8 +4,8 @@ text
 tweeting
 __pycache__
 *.html
-test2.py
-
+test.py
+.vscode
 
 
 
