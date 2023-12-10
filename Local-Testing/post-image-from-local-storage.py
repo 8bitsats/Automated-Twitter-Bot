@@ -1,7 +1,7 @@
 import tweepy
 import os
 from dotenv import load_dotenv
-from platform_authentication import *
+from platform_authentication import authenticate_twitter
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,7 +15,11 @@ def post_image_with_caption():
     try:
         api, client = authenticate_twitter()
         # Upload image to Twitter.
-        media_id = api.media_upload(filename="Path/to/image.jpeg").media_id_string
+
+        for i in range(1,5): #Set 1 to 4 images
+            IMAGE_PATH = f'{i}.jpg'
+            media_id = api.media_upload(filename=IMAGE_PATH).media_id_string
+            media_ids.append(media_id)
 
         # Text to be Tweeted
         text = input("Enter tweet Caption: ")
