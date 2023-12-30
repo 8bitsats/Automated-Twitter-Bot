@@ -62,7 +62,10 @@ api, client = authenticate_twitter()
 
 def post_tweets(caption, media_ids):
     try:
-        client.create_tweet(text=caption, media_ids=media_ids)
+        if not media_ids:
+            client.create_tweet(text=caption)
+        else:
+            client.create_tweet(text=caption, media_ids=media_ids)
     except Exception as err:
         print(f"Post Error: {err}")
 
@@ -119,4 +122,4 @@ def download_image(url, message_id):
     return media_ids
 
 
-find_media(url=telegram_url, message_id=22101)
+find_media(url=telegram_url, message_id=22083)
