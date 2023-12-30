@@ -1,7 +1,7 @@
 import requests
 import re
 from datetime import datetime
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString
 from concurrent.futures import ThreadPoolExecutor
 import tweepy
 import os
@@ -77,7 +77,7 @@ def find_media(url, message_id):
     #--------------------- SAVE CAPTION-------------------#
     if bool(soup_primary.find('div', class_='tgme_widget_message_text')) == True:
         message_div = soup_primary.find('div', class_='tgme_widget_message_text')
-        caption = str(message_div.get_text())
+        caption = message_div.get_text(strip=True, separator='\n')
         if contains_rm_word(caption, rm_words):
             return
         else:
@@ -122,4 +122,4 @@ def download_image(url, message_id):
     return media_ids
 
 
-find_media(url=telegram_url, message_id=22083)
+find_media(url=telegram_url, message_id=22019)
