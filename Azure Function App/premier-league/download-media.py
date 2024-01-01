@@ -44,6 +44,7 @@ def authenticate_twitter():
 
 # Remove Words from the caption
 rm_words = ["Telegram", "Channel", "Subscribe", "$", "Blockchain", "Promo", "https://t.me"]
+# rm_words = []
 
 def contains_rm_word(text, rm_words):
     text_lower = text.lower() # Convert the text to lowercase for case-insensitive matching
@@ -52,11 +53,12 @@ def contains_rm_word(text, rm_words):
 
 #************************************ VARIABLES ****************************************************
 
-channel_name = "connecttechjobs"
+channel_name = "premier_league_football_news"
 # account_name = re.search("AccountName=(.*?);", connection_string).group(1)
 telegram_url = f"https://t.me/{channel_name}"
 media_ids=[]
 api, client = authenticate_twitter()
+
 
 def format_caption(caption):
     thread_text = []
@@ -66,100 +68,93 @@ def format_caption(caption):
         thread_text.append(caption)
         return thread_text
 
-    # Calculate number of threads
-    No_of_threads = len(caption) // 275 + 1
-
-    # Split into sentences and handle long sentences
+    # Tokenize sentences
     sentences = nltk.sent_tokenize(caption)
-    for i, sentence in enumerate(sentences):
-        if len(sentence) > 275:
-            words = sentence.split()
-            while words:
-                current_line = " ".join(words[:270])
-                thread_text.append(current_line)
-                words = words[270:]
-        else:
-            thread_text.append(sentence)
+    formatted_caption = "\n".join(sentences)
 
-    # Divide sentences into threads of roughly equal length
-    threads = []
+    No_of_threads = len(formatted_caption) // 270 + 1
+
+    # Split the caption into threads based on the character limit
+    words = formatted_caption.split()
     current_thread = []
     current_length = 0
-    for sentence in thread_text:
-        if current_length + len(sentence) + 1 > 275:
-            threads.append(current_thread)
-            current_thread = []
-            current_length = 0
-        current_thread.append(sentence)
-        current_length += len(sentence) + 1
-    threads.append(current_thread)  # Add the last thread
 
-    # If necessary, adjust thread division to match the target number of threads
-    while len(threads) > No_of_threads:
-        threads[-2].extend(threads[-1])
-        threads.pop()
+    for word in words:
+        if current_length + len(word) + 1 > 270:
+            # Move to the next thread if adding the word would exceed the limit
+            thread_text.append(" ".join(current_thread))
+            current_thread = [word]
+            current_length = len(word)
+        else:
+            current_thread.append(word)
+            current_length += len(word) + 1
 
-    return threads
+    if current_thread:
+        thread_text.append(" ".join(current_thread))
 
-def post_to_twitter(threads, media_ids=None):
+    # Ensure the correct number of threads is created
+    while len(thread_text) > No_of_threads:
+        thread_text[-2] += " " + thread_text[-1]
+        thread_text.pop()
+
+    # Print threads and character counts
+    for i, thread in enumerate(thread_text):
+        total_chars = len(thread)
+        print('*' * 50)
+        print(f"Thread {i + 1} (Total Characters = {total_chars}):\n" + thread)
+
+    return thread_text
+
+def post_to_twitter(threads, media_ids_arrays):
     """Posts a multi-thread tweet with optional images.
 
     Args:
         threads: A list of text strings, each representing a thread.
         media_ids: A list of media IDs (optional, for image tweets).
     """
+    if len(threads) >= len(media_ids_arrays):
+        No_of_threads = len(threads)
+    else:
+        No_of_threads = len(media_ids_arrays)
 
     tweet_id = None
-    for i, thread in enumerate(threads):
-        if media_ids:
-            # Post a tweet with images
-            tweet = client.create_tweet(text="\n".join(thread), media_ids=media_ids)
+    # Zip threads and media_ids_arrays together
+    for i in range(max(len(threads), len(media_ids_arrays))):
+        thread = threads[i] if i < len(threads) else ""
+        media_ids_array = media_ids_arrays[i] if i < len(media_ids_arrays) else None
+        # Add thread counter at the end of each thread
+        if No_of_threads == 1:
+            thread_counter = f"{thread}\n"
         else:
-            # Post a text-only tweet
-            tweet = client.create_tweet(text="\n".join(thread), in_reply_to_tweet_id =tweet_id)
+            thread_counter = f"{thread}\n\n{i+1}/{No_of_threads}"
+
+        if i == 0:
+        # Post the first array as a thread
+            tweet = client.create_tweet(text=thread_counter, media_ids=media_ids_array)
+            tweet_id = tweet.data['id']
+            print(f"Thread {i + 1} posted")
+        else:
+            # Post subsequent arrays as replies
+            tweet = client.create_tweet(text=thread_counter, media_ids=media_ids_array, in_reply_to_tweet_id=tweet_id)
+            print(f"Thread {i + 1} posted as a reply")
 
         tweet_id = tweet.data['id']
 
-# tweet=client.create_tweet(text=caption, media_ids=media_ids, in_reply_to_tweet_id=response.data['id'])
-def post_tweets(thread_text, media_ids):
-    tweet_id = ''
-
-    tweet=client.create_tweet(text=thread_text[0], media_ids=media_ids)
-
-    for i in range(1, 7):
-        # 2 or 3 images in a single tweet
-        if len(media_ids) >= 2 and len(media_ids) <= 3:
-            tweet1 = client.create_tweet(text=f"Thread {i}", media_ids=media_ids)
-            print(f"Thread {i} posted")
-            break
-
-        # Check for scenario 2: 4 or more images, split and post in threads
-        elif i % 4 == 0:
-            tweet1 = client.create_tweet(text=f"Thread {i}", media_ids=media_ids, in_reply_to_tweet_id=tweet_id)
-            print(f"Thread {i} posted")
-            media_ids.clear()
-
-        # Default case: continue adding images to the list
-        else:
-            continue
-
-    # Check for remaining images and post them if needed
-    if media_ids:
-        tweet1 = client.create_tweet(text="Remaining images", media_ids=media_ids, in_reply_to_tweet_id=tweet_id)
-        print("Remaining images posted")
+    print("All threads and replies posted")
 
 
 def find_media(url, message_id):
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     response_primary = requests.get(url=f"{telegram_url}/{message_id}?embed=1&mode=tme")
     soup_primary = BeautifulSoup(response_primary.content, "html.parser")
+    
 
     #------------------------- SAVE CAPTION -------------------------#
     if bool(soup_primary.find('div', class_='tgme_widget_message_text')) == True:
         message_div = soup_primary.find('div', class_='tgme_widget_message_text')
-        caption = message_div.get_text(strip=True, separator='\n')
+        caption = message_div.get_text(strip=True, separator='\n').replace('<br>', '.')
         if contains_rm_word(caption, rm_words):
-            return
+            return message_id
 
     if soup_primary.find('div', class_='tgme_widget_message_grouped_wrap'):
         photo_wrap_classes = soup_primary.find_all('a', class_='tgme_widget_message_photo_wrap')
@@ -167,37 +162,49 @@ def find_media(url, message_id):
 
         for i in range(0, len(photo_wrap_classes)):
             download_url = f"https://t.me/{channel_name}/{message_id+i}?embed=1&mode=tme&single=1"
-            download_image(url=download_url, message_id=message_id+i)
             
+            media_id = download_image(channel_name=channel_name, url=download_url, message_id=message_id+i, api=api)
+            media_ids.append(media_id)
 
     elif soup_primary.find('a', class_='tgme_widget_message_photo_wrap') and not soup_primary.find('div', class_='tgme_widget_message_grouped_wrap'):
         download_url = f"https://t.me/{channel_name}/{message_id}?embed=1&mode=tme"
-        download_image(url=download_url, message_id=message_id)
+
+        media_id = download_image(channel_name=channel_name, url=download_url, message_id=message_id, api=api)
+        media_ids.append(media_id)
+
+    media_ids_arrays = [media_ids[i:i + 4] for i in range(0, len(media_ids), 4)]
 
     formatted_threads = format_caption(caption)
-    post_to_twitter(threads=formatted_threads, media_ids=None)
+    post_to_twitter(threads=formatted_threads, media_ids_arrays=media_ids_arrays)
     
 
 
-def download_image(url, message_id):
+def download_image(channel_name, url, message_id, api):
     response_sec = requests.get(url)
-    soup_sec = BeautifulSoup(response_sec.content, "html.parser")
+    soup_sec = BeautifulSoup(response_sec.text, "html.parser")
 
     if soup_sec.find('div', class_="tgme_widget_message_error"):
-        print("No media")
-        return
+        print(f"No media for message_id {message_id}")
+        return None
 
     image_tag = soup_sec.find('a', class_='tgme_widget_message_photo_wrap')
     image_url = image_tag['style'].split('url(')[1].split(')')[0].strip("'")
-    filename = f'{channel_name}-{message_id}.jpg'
+    filename = f'{message_id}.jpg'
 
-    with requests.get(image_url, stream=True) as response:
-        with open(filename, 'wb') as img_file:
-            for chunk in response.iter_content(chunk_size=8192):
-                img_file.write(chunk)
+    response = requests.get(image_url)
+    with open(filename, 'wb') as img_file:
+        img_file.write(response.content)
+
+    # Upload to Twitter
     media_id = api.media_upload(filename=filename).media_id_string
-    media_ids.append(media_id)
-    return media_ids
+
+    # Delete local image file
+    try:
+        os.remove(filename)
+    except OSError as e:
+        print(f"Error deleting file {filename}: {e}")
+
+    return media_id
 
 
-find_media(url=telegram_url, message_id=492)
+find_media(url=telegram_url, message_id=22082)
