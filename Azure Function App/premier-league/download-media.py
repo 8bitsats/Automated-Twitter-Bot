@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup, NavigableString
 from concurrent.futures import ThreadPoolExecutor
 import tweepy
 import os
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -42,22 +43,10 @@ def authenticate_twitter():
         print(f"Twitter authentication failed: {e}")
         return None
 
-# Remove Words from the caption
-rm_words = ["Telegram", "Channel", "Subscribe", "$", "Blockchain", "Promo", "https://t.me"]
-# rm_words = []
 
 def contains_rm_word(text, rm_words):
     text_lower = text.lower() # Convert the text to lowercase for case-insensitive matching
     return any(word.lower() in text_lower for word in rm_words)
-
-
-#************************************ VARIABLES ****************************************************
-
-channel_name = "premier_league_football_news"
-# account_name = re.search("AccountName=(.*?);", connection_string).group(1)
-telegram_url = f"https://t.me/{channel_name}"
-media_ids=[]
-api, client = authenticate_twitter()
 
 
 def format_caption(caption):
@@ -143,11 +132,13 @@ def post_to_twitter(threads, media_ids_arrays):
     print("All threads and replies posted")
 
 
-def find_media(url, message_id):
-    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    response_primary = requests.get(url=f"{telegram_url}/{message_id}?embed=1&mode=tme")
-    soup_primary = BeautifulSoup(response_primary.content, "html.parser")
+def find_media(url, message_id, soup_primary):
+    error = soup_primary.find('div', class_="tgme_widget_message_error")
     
+    # validate the link has media
+    if error and error.text == "Post not found":
+        print(f"No post found in in id: {message_id} !!")
+        return message_id
 
     #------------------------- SAVE CAPTION -------------------------#
     if bool(soup_primary.find('div', class_='tgme_widget_message_text')) == True:
@@ -165,6 +156,9 @@ def find_media(url, message_id):
             
             media_id = download_image(channel_name=channel_name, url=download_url, message_id=message_id+i, api=api)
             media_ids.append(media_id)
+        
+        # update the new message id
+        message_id = message_id+(len(photo_wrap_classes)-1)
 
     elif soup_primary.find('a', class_='tgme_widget_message_photo_wrap') and not soup_primary.find('div', class_='tgme_widget_message_grouped_wrap'):
         download_url = f"https://t.me/{channel_name}/{message_id}?embed=1&mode=tme"
@@ -176,7 +170,7 @@ def find_media(url, message_id):
 
     formatted_threads = format_caption(caption)
     post_to_twitter(threads=formatted_threads, media_ids_arrays=media_ids_arrays)
-    
+    return message_id
 
 
 def download_image(channel_name, url, message_id, api):
@@ -206,5 +200,47 @@ def download_image(channel_name, url, message_id, api):
 
     return media_id
 
+def update_message_id(message_id):
+    # write the next message id
+    message_id = message_id+1
+    file = open("./text_log.txt", "w")
+    file.write(str(message_id))
+    print("New Message ID: ", message_id)
+    file.close()
 
-find_media(url=telegram_url, message_id=22082)
+
+#************************************ VARIABLES ****************************************************
+
+# channel_name = "premier_league_football_news"
+# account_name = re.search("AccountName=(.*?);", connection_string).group(1)
+media_ids=[]
+api, client = authenticate_twitter()
+
+
+# Remove Words from the caption
+rm_words = ["Telegram", "Channel", "Subscribe", "$", "Blockchain", "Promo", "https://t.me"]
+# rm_words = []
+
+channel_name = "CMK_Wallpapers"
+url = f"https://t.me/{channel_name}"
+message_id = 7365
+
+while True:
+    telegram_url = f"{url}/{message_id}?embed=1&mode=tme"
+    
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    print("Current time:", current_time)
+
+    response_primary = requests.get(telegram_url)
+    
+    if response_primary.status_code == 200:
+        soup_primary = BeautifulSoup(response_primary.content, "html.parser")
+
+        # Check if the URL is available
+        if bool(soup_primary.find('div', class_='tgme_widget_message_text')) == True:
+            find_media(url=telegram_url, message_id=message_id, soup_primary = soup_primary)
+            update_message_id(message_id)
+            # Break the loop once the URL is available
+            break
+
+    time.sleep(10) # Wait for some time before checking again
