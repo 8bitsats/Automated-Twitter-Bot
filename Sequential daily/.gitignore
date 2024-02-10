@@ -1,0 +1,11 @@
+
+__azurite_db*__.json
+__blobstorage__
+__queuestorage__
+test*
+__pycache__
+.venv
+.python_packages
+testenv
+Quotes
+.env

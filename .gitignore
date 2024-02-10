@@ -5,6 +5,7 @@ tweeting
 __pycache__
 *.html
 test.py
-.vscode
 *.jpg
 scrap_tweets.py
+__*
+.vscode

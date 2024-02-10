@@ -8,3 +8,5 @@ test*
 __pycache__
 .venv
 testenv
+Quotes
+.env
