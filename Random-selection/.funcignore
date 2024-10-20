@@ -2,3 +2,4 @@
 .vscode
 __*
 local.settings.json
+.venv
